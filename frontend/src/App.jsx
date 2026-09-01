@@ -85,7 +85,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 max-w-[1440px] mx-auto space-y-6">
+    <div className="min-h-screen min-w-[99vw] bg-slate-950 text-slate-100 p-6 mx-auto space-y-6">
       {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-800 pb-5 gap-4">
         <div>
