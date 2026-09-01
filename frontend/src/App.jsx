@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea,ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, CartesianGrid } from 'recharts';
 
@@ -140,13 +140,14 @@ export default function App() {
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Ranked Accounts Sidebar List (4 cols) */}
-          <Card className="lg:col-span-4 bg-[#151D25] border-[#28333E] shadow-none overflow-hidden flex flex-col h-[550px]">
+          <Card className="lg:col-span-4 bg-transparent bg-blur-2xl shadow-2xl border-[#28333E] border p-0 overflow-hidden flex flex-col h-[550px]">
             <CardHeader className="py-3 px-4 bg-[#1A2530] shrink-0 border-b border-[#28333E]">
               <CardTitle className="text-xs font-semibold text-[#8CA0B0] uppercase tracking-wider">
                 Ranked accounts
               </CardTitle>
             </CardHeader>
-            <ScrollArea className="flex-1 w-full">
+            <ScrollArea className="flex-1 w-full overflow-auto">
+              <ScrollBar></ScrollBar>
               <div className="divide-y divide-[#1E2830]">
                 {filteredAccounts.map((acc, index) => {
                   const accId = getAccId(acc);
@@ -178,7 +179,7 @@ export default function App() {
                       {/* Confidence Score Output */}
                       <div className="col-span-3 text-right font-mono text-xs">
                         <span className={`font-semibold ${score >= 0.5 ? 'text-[#E8A33D]' : 'text-[#8CA0B0]'}`}>
-                          {score.toFixed(2)}
+                          {score.toFixed(4)}
                         </span>
                       </div>
                     </div>
@@ -198,7 +199,7 @@ export default function App() {
                   <div>
                     <h2 className="font-mono text-xl font-bold text-white">{getAccId(selectedAccount)}</h2>
                     <p className="text-xs text-[#8CA0B0] mt-0.5">
-                      Confidence score <span className="font-mono font-semibold text-[#E8A33D]">{getScore(selectedAccount).toFixed(2)}</span>
+                      Confidence score <span className="font-mono font-semibold text-[#E8A33D]">{getScore(selectedAccount).toFixed(4)}</span>
                     </p>
                   </div>
                   {showEvaluation && selectedAccount.actual_label !== undefined && (
@@ -211,7 +212,7 @@ export default function App() {
                 {/* COMPACT TOP TABS BAR - FORCED VERTICAL FLEX STACK */}
                 <Tabs defaultValue="consumption" className="w-full flex flex-col space-y-3">
                   <div className="flex justify-start w-full">
-                    <TabsList className="bg-[#1A2530] border border-[#28333E] p-0.5 h-8 gap-1 rounded text-[#8CA0B0]">
+                    <TabsList className="bg-[#1A2530] border border-[#28333E] p-0.5 h-8 gap-1 rounded-xl text-[#8CA0B0]">
                       <TabsTrigger 
                         value="consumption" 
                         className="text-[11px] font-mono px-2.5 py-1 rounded-sm text-[#8CA0B0] bg-transparent hover:text-white data-[state=active]:bg-[#151D25] data-[state=active]:text-[#E8A33D] data-[state=active]:shadow-none data-[state=active]:font-semibold"
