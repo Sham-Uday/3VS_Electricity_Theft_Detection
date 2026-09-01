@@ -17,7 +17,7 @@ app.add_middleware(
 # --- Synthetic Data Engine with Real Timestamps & Feature Attribution ---
 np.random.seed(42)
 DAYS = 1095  # 3 years
-N_ACCOUNTS = 70
+N_ACCOUNTS = 500
 SPLIT_IDX = int(DAYS * 0.7)
 START_DATE = pd.to_datetime("2023-09-01")
 DATE_RANGE = pd.date_range(start=START_DATE, periods=DAYS, freq="D")
@@ -28,7 +28,7 @@ all_y_scores = []
 
 for i in range(N_ACCOUNTS):
     acc_id = f"AC-{np.random.randint(10000, 99999)}"
-    is_theft = i < 5  # 5 confirmed theft accounts for simulation
+    is_theft = i < 35 # 5 confirmed theft accounts for simulation
     
     base_usage = np.random.uniform(8.0, 22.0)
     trend = np.sin(np.linspace(0, 6 * np.pi, DAYS)) * 2.0

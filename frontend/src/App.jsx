@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, CartesianGrid, BarChart, Bar } from 'recharts';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -73,6 +73,20 @@ export default function App() {
     setAuditDispatched(prev => ({ ...prev, [accId]: true }));
   };
 
+  const getScoreDistribution = () => {
+    const bins = Array(10).fill(0).map((_, i) => ({
+      range: `${(i * 0.1).toFixed(1)}–${((i + 1) * 0.1).toFixed(1)}`,
+      count: 0
+    }));
+    accounts.forEach(acc => {
+      const score = getScore(acc);
+      let binIdx = Math.floor(score * 10);
+      if (binIdx >= 10) binIdx = 9;
+      bins[binIdx].count += 1;
+    });
+    return bins;
+  };
+
   if (loading) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-cyan-400 font-mono">Loading Classifier Metrics...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-red-400 font-mono">Error: {error}</div>;
 
@@ -103,8 +117,8 @@ export default function App() {
                   AUC-PR, holdout period
                 </div>
                 <div className="text-[11px] text-[#5C6D7A]">vs {metrics.baseline_auc_pr} baseline (5 confirmed of 70)</div>
-              </div>
             </div>
+          </div>
           )}
         </header>
 
@@ -217,7 +231,7 @@ export default function App() {
                     <Button
                       size="sm"
                       onClick={() => handleDispatchAudit(getAccId(selectedAccount))}
-                      className={`${auditDispatched[getAccId(selectedAccount)] ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-[#E8A33D] hover:bg-[#d69333] text-black font-semibold'} text-xs font-mono h-8 px-3`}
+                      className={`${auditDispatched[getAccId(selectedAccount)] ? '!bg-emerald-600 hover:bg-emerald-700 !text-white' : 'bg-[#E8A33D] hover:bg-[#d69333] text-white font-semibold'} text-xs font-mono h-8 px-3`}
                     >
                       {auditDispatched[getAccId(selectedAccount)] ? 'Audit Dispatched ✓' : 'Dispatch Field Audit'}
                     </Button>
@@ -239,6 +253,12 @@ export default function App() {
                         className="text-[11px] font-mono px-2.5 py-1 rounded-sm text-[#8CA0B0] bg-transparent hover:text-white data-[state=active]:bg-[#151D25] data-[state=active]:text-[#E8A33D] data-[state=active]:shadow-none data-[state=active]:font-semibold"
                       >
                         Model AUC-PR Curve
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="distribution" 
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-sm text-[#8CA0B0] bg-transparent hover:text-white data-[state=active]:bg-[#151D25] data-[state=active]:text-[#E8A33D] data-[state=active]:shadow-none data-[state=active]:font-semibold"
+                      >
+                        Score Distribution
                       </TabsTrigger>
                     </TabsList>
                   </div>
@@ -288,6 +308,28 @@ export default function App() {
                       <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E54D2E]"></span> random baseline</span>
                     </div>
                   </TabsContent>
+
+                  {/* TAB 3: Score Distribution Histogram */}
+                  <TabsContent value="distribution" className="w-full space-y-2 m-0 border-none p-0">
+                    <div className="h-60 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getScoreDistribution()} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#28333E" />
+                          <XAxis dataKey="range" stroke="#5C6D7A" fontSize={10} />
+                          <YAxis stroke="#5C6D7A" fontSize={10} allowDecimals={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1A2530', borderColor: '#28333E', fontSize: 12, borderRadius: 4, color: '#fff' }}
+                            formatter={(value) => [value, 'Accounts']}
+                            labelFormatter={(label) => `Score Range: ${label}`}
+                          />
+                          <Bar dataKey="count" fill="#4FC1D9" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex gap-6 text-[11px] text-[#8CA0B0] pt-1 font-mono">
+                      <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#4FC1D9]"></span> account volume per confidence bin</span>
+                    </div>
+                  </TabsContent>
                 </Tabs>
 
                 {/* Model Feature Summary Cards */}
@@ -303,7 +345,7 @@ export default function App() {
                     <div className="font-mono text-sm font-semibold text-white mt-1">
                       {Number(selectedAccount.holdout_mean || (selectedAccount.mean_consumption ? selectedAccount.mean_consumption * 0.7 : 0)).toFixed(2)}
                     </div>
-                </div>
+                  </div>
                   <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
                     <div className="text-[11px] text-[#8CA0B0]">Drop ratio (holdout / baseline)</div>
                     <div className="font-mono text-sm font-semibold text-[#E8A33D] mt-1">
