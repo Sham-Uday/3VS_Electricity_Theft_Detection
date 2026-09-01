@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea,ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, CartesianGrid } from 'recharts';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -31,6 +32,7 @@ export default function App() {
   const [showEvaluation, setShowEvaluation] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [auditDispatched, setAuditDispatched] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,6 +69,10 @@ export default function App() {
 
   const highRiskCount = accounts.filter(a => getScore(a) >= (metrics?.review_threshold || 0.5)).length;
 
+  const handleDispatchAudit = (accId) => {
+    setAuditDispatched(prev => ({ ...prev, [accId]: true }));
+  };
+
   if (loading) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-cyan-400 font-mono">Loading Classifier Metrics...</div>;
   if (error) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-red-400 font-mono">Error: {error}</div>;
 
@@ -79,7 +85,7 @@ export default function App() {
       <div className="absolute top-[50%] right-[0%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-tl from-purple-900/95 via-rose-950/15 to-transparent blur-3xl pointer-events-none" />
 
       {/* Main Container Wrapper */}
-      <div className="relative z-10 space-y-6 max-w-screen mx-auto">
+      <div className="relative z-10 space-y-6 w-[96vw] mx-auto">
         
         {/* Header with Performance Evaluation (AUC-PR) */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#28333E] pb-5 gap-4">
@@ -141,7 +147,7 @@ export default function App() {
           
           {/* Ranked Accounts Sidebar List (4 cols) */}
           <Card className="lg:col-span-4 bg-transparent bg-blur-2xl shadow-2xl border-[#28333E] border p-0 overflow-hidden flex flex-col h-[550px]">
-            <CardHeader className="py-3 px-4 bg-[#1A2530] shrink-0 border-b border-[#28333E]">
+            <CardHeader className="py-3 px-4 bg-[#1A2530] border-b border-[#28333E]">
               <CardTitle className="text-xs font-semibold text-[#8CA0B0] uppercase tracking-wider">
                 Ranked accounts
               </CardTitle>
@@ -202,11 +208,20 @@ export default function App() {
                       Confidence score <span className="font-mono font-semibold text-[#E8A33D]">{getScore(selectedAccount).toFixed(4)}</span>
                     </p>
                   </div>
-                  {showEvaluation && selectedAccount.actual_label !== undefined && (
-                    <Badge className={`font-mono text-xs px-2.5 py-1 ${selectedAccount.actual_label === 1 ? 'bg-[#E8A33D]/20 text-[#E8A33D] border-[#E8A33D]/40' : 'bg-slate-800 text-slate-400'}`}>
-                      {selectedAccount.actual_label === 1 ? 'Confirmed Theft' : 'Normal Account'}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {showEvaluation && selectedAccount.actual_label !== undefined && (
+                      <Badge className={`font-mono text-xs px-2.5 py-1 ${selectedAccount.actual_label === 1 ? 'bg-[#E8A33D]/20 text-[#E8A33D] border-[#E8A33D]/40' : 'bg-slate-800 text-slate-400'}`}>
+                        {selectedAccount.actual_label === 1 ? 'Confirmed Theft' : 'Normal Account'}
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => handleDispatchAudit(getAccId(selectedAccount))}
+                      className={`${auditDispatched[getAccId(selectedAccount)] ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-[#E8A33D] hover:bg-[#d69333] text-black font-semibold'} text-xs font-mono h-8 px-3`}
+                    >
+                      {auditDispatched[getAccId(selectedAccount)] ? 'Audit Dispatched ✓' : 'Dispatch Field Audit'}
+                    </Button>
+                  </div>
                 </div>
 
                 {/* COMPACT TOP TABS BAR - FORCED VERTICAL FLEX STACK */}
@@ -288,7 +303,7 @@ export default function App() {
                     <div className="font-mono text-sm font-semibold text-white mt-1">
                       {Number(selectedAccount.holdout_mean || (selectedAccount.mean_consumption ? selectedAccount.mean_consumption * 0.7 : 0)).toFixed(2)}
                     </div>
-                  </div>
+                </div>
                   <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
                     <div className="text-[11px] text-[#8CA0B0]">Drop ratio (holdout / baseline)</div>
                     <div className="font-mono text-sm font-semibold text-[#E8A33D] mt-1">
