@@ -133,34 +133,36 @@ export default function App() {
               Suspicious Accounts (Top 100)
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 max-h-[620px] overflow-y-auto divide-y divide-slate-800/60">
-            {filteredAccounts.map((acc, index) => {
-              const accId = String(acc.account_id || acc.id || `Acc-${index + 1}`);
-              const score = getScore(acc);
-              const isSelected = selectedAccount && String(selectedAccount.account_id || selectedAccount.id) === accId;
+          <div className="h-[620px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-900">
+            <div className="divide-y divide-slate-800/60">
+              {filteredAccounts.map((acc, index) => {
+                const accId = String(acc.account_id || acc.id || `Acc-${index + 1}`);
+                const score = getScore(acc);
+                const isSelected = selectedAccount && String(selectedAccount.account_id || selectedAccount.id) === accId;
 
-              return (
-                <div
-                  key={accId}
-                  onClick={() => setSelectedAccount(acc)}
-                  className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-slate-800/90 border-l-4 border-amber-400' : 'hover:bg-slate-800/40'
-                  }`}
-                >
-                  <span className="col-span-1 font-mono text-xs text-slate-500">#{index + 1}</span>
-                  <span className="col-span-7 font-mono text-xs truncate text-slate-200" title={accId}>
-                    {accId}
-                  </span>
-                  <div className="col-span-4 flex items-center justify-end gap-2">
-                    <Progress value={score * 100} className="h-1.5 bg-slate-800 [&>div]:bg-amber-400 flex-1" />
-                    <span className="font-mono text-xs text-amber-400 font-semibold w-10 text-right">
-                      {score.toFixed(3)}
+                return (
+                  <div
+                    key={accId}
+                    onClick={() => setSelectedAccount(acc)}
+                    className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-slate-800/90 border-l-4 border-amber-400' : 'hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <span className="col-span-1 font-mono text-xs text-slate-500">#{index + 1}</span>
+                    <span className="col-span-7 font-mono text-xs truncate text-slate-200" title={accId}>
+                      {accId}
                     </span>
+                    <div className="col-span-4 flex items-center justify-end gap-2">
+                      <Progress value={score * 100} className="h-1.5 bg-slate-800 [&>div]:bg-amber-400 flex-1" />
+                      <span className="font-mono text-xs text-amber-400 font-semibold w-10 text-right">
+                        {score.toFixed(3)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
+                );
+              })}
+            </div>
+          </div>
         </Card>
 
         {/* Detail Panel (7 cols) */}
