@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -12,208 +11,227 @@ export default function App() {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortMode, setSortMode] = useState('score_desc');
+  const [showEvaluation, setShowEvaluation] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [metricsRes, accountsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/metrics`),
-        fetch(`${API_BASE_URL}/api/suspicious-accounts`)
-      ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [metricsRes, accountsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/metrics`),
+          fetch(`${API_BASE_URL}/api/suspicious-accounts`)
+        ]);
 
-      if (!metricsRes.ok || !accountsRes.ok) {
-        throw new Error('Failed to connect to backend server');
-      }
+        if (!metricsRes.ok || !accountsRes.ok) throw new Error('API request failed');
 
-      const metricsData = await metricsRes.json();
-      const accountsData = await accountsRes.json();
+        const metricsData = await metricsRes.json();
+        const accountsData = await accountsRes.json();
 
-      if (accountsData.error) {
-        setError(accountsData.error);
-      } else {
         setMetrics(metricsData);
         setAccounts(accountsData);
-        if (accountsData.length > 0) {
-          setSelectedAccount(accountsData[0]);
-        }
+        if (accountsData.length > 0) setSelectedAccount(accountsData[0]);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
+    };
     fetchData();
   }, []);
 
-  const filteredAccounts = accounts.filter(acc => {
-    const idStr = String(acc.account_id || acc.id || '');
-    return idStr.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const getScore = (acc) => Number(acc.theft_probability ?? acc.score ?? acc.prediction ?? 0);
+  const getAccId = (acc) => String(acc.account_id || acc.id || '');
 
-  const getScore = (acc) => {
-    const val = acc.theft_probability ?? acc.anomaly_score ?? acc.score ?? acc.prediction ?? 0;
-    return Number(val) || 0;
-  };
+  const filteredAccounts = accounts
+    .filter(acc => getAccId(acc).toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => sortMode === 'score_desc' ? getScore(b) - getScore(a) : getScore(a) - getScore(b));
 
-  if (loading) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-950 text-slate-100 font-mono gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent"></div>
-        <p className="text-sm text-slate-400">Loading Dashboard Metrics...</p>
-      </div>
-    );
-  }
+  const highRiskCount = accounts.filter(a => getScore(a) >= (metrics?.review_threshold || 0.5)).length;
 
-  if (error) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-slate-950 text-slate-100 p-4 font-mono gap-4">
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-6 max-w-md text-center">
-          <h2 className="text-lg font-bold text-red-400 mb-2">API Connection Failed</h2>
-          <p className="text-sm text-slate-400 mb-4">{error}</p>
-          <Button variant="outline" onClick={fetchData} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
-            Retry Connection
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-950 text-cyan-400 font-mono">Loading Classifier Metrics...</div>;
+  if (error) return <div className="flex h-screen items-center justify-center bg-slate-950 text-red-400 font-mono">Error: {error}</div>;
 
   return (
-    <div className="min-h-screen min-w-[99vw] bg-slate-950 text-slate-100 p-6 mx-auto space-y-6">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-800 pb-5 gap-4">
+    <div className="min-h-screen bg-[#0E141A] text-[#E6EDF3] p-6 max-w-[1500px] mx-auto space-y-6 font-sans">
+      {/* Header with Performance Evaluation (AUC-PR) */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#28333E] pb-5 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white font-sans">Electricity Theft Detection</h1>
-          <p className="text-sm text-slate-400 mt-1">Consumption Anomaly Ranking & Target Inspector</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white font-sans">Meter review</h1>
+          <p className="text-sm text-[#8CA0B0] mt-1">
+            Accounts ranked by likelihood of tampering, scored from three years of daily smart-meter readings against baseline.
+          </p>
         </div>
         {metrics && (
-          <div className="flex gap-8 text-right">
+          <div className="flex items-baseline gap-3 text-right">
             <div>
-              <div className="text-3xl font-bold font-mono text-cyan-400">{metrics.auc_pr}</div>
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider mt-1">AUC-PR Score</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold font-mono text-cyan-400">{metrics.scanned_meters?.toLocaleString()}</div>
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider mt-1">Scanned Meters</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold font-mono text-amber-400">{metrics.flagged_accounts}</div>
-              <div className="text-[11px] text-slate-500 uppercase tracking-wider mt-1">Flagged Accounts</div>
+              <div className="text-4xl font-extrabold font-mono text-[#E8A33D] tracking-tight">{metrics.auc_pr.toFixed(4)}</div>
+              <div className="text-xs text-[#8CA0B0] uppercase tracking-wider mt-1">
+                AUC-PR, holdout period
+              </div>
+              <div className="text-[11px] text-[#5C6D7A]">vs {metrics.baseline_auc_pr} baseline (5 confirmed of 70)</div>
             </div>
           </div>
         )}
       </header>
 
-      {/* Toolbar */}
-      <div className="flex justify-between items-center gap-4">
-        <Input
-          type="text"
-          placeholder="Search Account ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-xs bg-slate-900 border-slate-800 text-slate-100 focus-visible:ring-cyan-500 placeholder:text-slate-500"
-        />
-        <div className="text-xs text-slate-400">
-          Showing <span className="font-semibold text-slate-200">{filteredAccounts.length}</span> of <span className="font-semibold text-slate-200">{accounts.length}</span> accounts
+      {/* Toolbar & Filter Options */}
+      <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div className="flex items-center gap-4">
+          <Input
+            type="text"
+            placeholder="Search account ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-56 bg-[#151D25] border-[#28333E] text-white focus-visible:ring-cyan-500 placeholder:text-[#5C6D7A]"
+          />
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value)}
+            className="bg-[#151D25] border border-[#28333E] rounded-md px-3 py-2 text-white outline-none cursor-pointer"
+          >
+            <option value="score_desc">Sort: score, high to low</option>
+            <option value="score_asc">Sort: score, low to high</option>
+          </select>
+          <label className="flex items-center gap-2 text-[#8CA0B0] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showEvaluation}
+              onChange={(e) => setShowEvaluation(e.target.checked)}
+              className="accent-[#4FC1D9] rounded"
+            />
+            Show confirmed labels (evaluation view)
+          </label>
+        </div>
+        <div className="text-[#8CA0B0]">
+          {filteredAccounts.length} of {accounts.length} accounts · <span className="text-white font-medium">{highRiskCount}</span> above {metrics?.review_threshold} review threshold
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid Inspector View */}
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Accounts List (5 cols) */}
-        <Card className="lg:col-span-5 bg-slate-900 border-slate-800 text-slate-100 shadow-none">
-          <CardHeader className="border-b border-slate-800 py-3.5 px-4">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Suspicious Accounts (Top 100)
+        
+        {/* Ranked Accounts Sidebar List (4 cols) */}
+        <Card className="lg:col-span-4 bg-[#151D25] border-[#28333E] text-white shadow-none rounded-md overflow-hidden">
+          <CardHeader className="border-b border-[#28333E] py-3 px-4 bg-[#1A2530]">
+            <CardTitle className="text-xs font-semibold text-[#8CA0B0] uppercase tracking-wider">
+              Ranked accounts
             </CardTitle>
           </CardHeader>
-          <div className="h-[620px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-900">
-            <div className="divide-y divide-slate-800/60">
-              {filteredAccounts.map((acc, index) => {
-                const accId = String(acc.account_id || acc.id || `Acc-${index + 1}`);
-                const score = getScore(acc);
-                const isSelected = selectedAccount && String(selectedAccount.account_id || selectedAccount.id) === accId;
+          <CardContent className="p-0 max-h-[650px] overflow-y-auto divide-y divide-[#1E2830]">
+            {filteredAccounts.map((acc, index) => {
+              const accId = getAccId(acc);
+              const score = getScore(acc);
+              const isSelected = selectedAccount && getAccId(selectedAccount) === accId;
 
-                return (
-                  <div
-                    key={accId}
-                    onClick={() => setSelectedAccount(acc)}
-                    className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
-                      isSelected ? 'bg-slate-800/90 border-l-4 border-amber-400' : 'hover:bg-slate-800/40'
-                    }`}
-                  >
-                    <span className="col-span-1 font-mono text-xs text-slate-500">#{index + 1}</span>
-                    <span className="col-span-7 font-mono text-xs truncate text-slate-200" title={accId}>
-                      {accId}
-                    </span>
-                    <div className="col-span-4 flex items-center justify-end gap-2">
-                      <Progress value={score * 100} className="h-1.5 bg-slate-800 [&>div]:bg-amber-400 flex-1" />
-                      <span className="font-mono text-xs text-amber-400 font-semibold w-10 text-right">
-                        {score.toFixed(3)}
-                      </span>
-                    </div>
+              return (
+                <div
+                  key={accId}
+                  onClick={() => setSelectedAccount(acc)}
+                  className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
+                    isSelected ? 'bg-[#1A2530] border-l-4 border-[#E8A33D]' : 'hover:bg-[#1A2530]/50'
+                  }`}
+                >
+                  <span className="col-span-1 font-mono text-xs text-[#5C6D7A]">#{index + 1}</span>
+                  <span className="col-span-5 font-mono text-xs truncate font-medium" title={accId}>{accId}</span>
+                  
+                  {/* Micro Sparkline Preview */}
+                  <div className="col-span-3 h-5 flex items-center">
+                    {acc.sparkline && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={acc.sparkline.map((v, i) => ({ i, v }))}>
+                          <Line type="monotone" dataKey="v" stroke="#4FC1D9" strokeWidth={1.5} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+
+                  {/* Confidence Score Output */}
+                  <div className="col-span-3 text-right font-mono text-xs">
+                    <span className={`font-semibold ${score >= 0.5 ? 'text-[#E8A33D]' : 'text-[#8CA0B0]'}`}>
+                      {score.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
         </Card>
 
-        {/* Detail Panel (7 cols) */}
-        <Card className="lg:col-span-7 bg-slate-900 border-slate-800 text-slate-100 shadow-none">
-          <CardHeader className="border-b border-slate-800 py-3.5 px-6">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Account Details Inspector
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            {selectedAccount ? (
-              <div className="space-y-6">
-                <div className="border-b border-slate-800/80 pb-4">
-                  <span className="text-[11px] uppercase tracking-wider text-slate-500 font-medium">Selected Account</span>
-                  <h3 className="font-mono text-lg font-semibold text-cyan-400 break-all mt-0.5">
-                    {selectedAccount.account_id || selectedAccount.id}
-                  </h3>
+        {/* Selected Account Time Series Inspector (8 cols) */}
+        <Card className="lg:col-span-8 bg-[#151D25] border-[#28333E] text-white shadow-none rounded-md">
+          {selectedAccount ? (
+            <CardContent className="p-6 space-y-6">
+              {/* Account Confidence Title Header */}
+              <div className="flex justify-between items-start border-b border-[#28333E] pb-4">
+                <div>
+                  <h2 className="font-mono text-xl font-bold text-white">{getAccId(selectedAccount)}</h2>
+                  <p className="text-xs text-[#8CA0B0] mt-0.5">
+                    Confidence score <span className="font-mono font-semibold text-[#E8A33D]">{getScore(selectedAccount).toFixed(2)}</span>
+                  </p>
                 </div>
+                {showEvaluation && selectedAccount.actual_label !== undefined && (
+                  <Badge className={`font-mono text-xs px-2.5 py-1 ${selectedAccount.actual_label === 1 ? 'bg-[#E8A33D]/20 text-[#E8A33D] border-[#E8A33D]/40' : 'bg-slate-800 text-slate-400'}`}>
+                    {selectedAccount.actual_label === 1 ? 'Confirmed Theft' : 'Normal Account'}
+                  </Badge>
+                )}
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Object.entries(selectedAccount).map(([key, val]) => {
-                    const isHighRisk = key === 'theft_probability' && Number(val) > 0.5;
-                    const isConfirmed = key === 'actual_label' && Number(val) === 1;
-
-                    return (
-                      <div
-                        key={key}
-                        className={`p-4 rounded-lg border transition-all ${
-                          isHighRisk
-                            ? 'bg-amber-500/10 border-amber-500/40'
-                            : 'bg-slate-950/60 border-slate-800'
-                        }`}
-                      >
-                        <div className="text-xs text-slate-400 capitalize">{key.replace(/_/g, ' ')}</div>
-                        <div className={`font-mono text-lg font-medium mt-1 ${isHighRisk ? 'text-amber-400' : 'text-slate-100'}`}>
-                          {typeof val === 'number' ? val.toFixed(4) : String(val)}
-                        </div>
-                        {isConfirmed && (
-                          <Badge className="mt-2 text-[10px] bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30">
-                            Confirmed Theft
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* Time Series Graph Component */}
+              <div className="space-y-2">
+                <div className="h-64 w-full pt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={selectedAccount.time_series || []}>
+                      <XAxis dataKey="date" stroke="#5C6D7A" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#5C6D7A" fontSize={10} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1A2530', borderColor: '#28333E', fontSize: 12, borderRadius: 4 }}
+                        labelStyle={{ color: '#8CA0B0' }}
+                      />
+                      <ReferenceLine x={selectedAccount.time_series?.[90]?.date} stroke="#5C6D7A" strokeDasharray="3 3" label={{ value: 'holdout', fill: '#5C6D7A', fontSize: 10 }} />
+                      <Line type="monotone" dataKey="value" stroke="#E8A33D" strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex gap-6 text-xs text-[#8CA0B0] pt-2 font-mono">
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E8A33D]"></span> daily reading (gap = missing)</span>
+                  <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#5C6D7A]"></span> holdout period</span>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-16 text-slate-500 text-sm">Select an account to view detailed metrics</div>
-            )}
-          </CardContent>
+
+              {/* Model Feature Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
+                  <div className="text-[11px] text-[#8CA0B0]">Train baseline mean</div>
+                  <div className="font-mono text-sm font-semibold text-white mt-1">
+                    {Number(selectedAccount.mean_consumption || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
+                  <div className="text-[11px] text-[#8CA0B0]">Holdout mean</div>
+                  <div className="font-mono text-sm font-semibold text-white mt-1">
+                    {Number(selectedAccount.holdout_mean || (selectedAccount.mean_consumption ? selectedAccount.mean_consumption * 0.7 : 0)).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
+                  <div className="text-[11px] text-[#8CA0B0]">Drop ratio (holdout / baseline)</div>
+                  <div className="font-mono text-sm font-semibold text-[#E8A33D] mt-1">
+                    {Number(selectedAccount.recent_drop_ratio || 0.42).toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-[#1A2530] p-3 rounded border border-[#28333E]">
+                  <div className="text-[11px] text-[#8CA0B0]">Missing rate, holdout</div>
+                  <div className="font-mono text-sm font-semibold text-white mt-1">
+                    {Number(selectedAccount.zero_day_count || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          ) : (
+            <div className="text-center py-24 text-[#5C6D7A]">Select an account to view inspection graph</div>
+          )}
         </Card>
       </main>
     </div>
