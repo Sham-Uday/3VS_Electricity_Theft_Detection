@@ -275,7 +275,11 @@ export default function App() {
                             labelStyle={{ color: '#8CA0B0' }}
                           />
                           <ReferenceLine x={selectedAccount.time_series?.[90]?.date} stroke="#5C6D7A" strokeDasharray="3 3" label={{ value: 'holdout', fill: '#5C6D7A', fontSize: 10 }} />
-                          <Line type="monotone" dataKey="value" stroke="#E8A33D" strokeWidth={1.5} dot={false} />
+                          {/* Raw Daily Scatter/Line */}
+                          <Line type="monotone" dataKey="value" stroke="#E8A33D" strokeWidth={1} dot={false} name="Daily Reading" opacity={0.6} />
+        
+                          {/* Smoothed 7-Day Rolling Average Feature */}
+                          <Line type="monotone" dataKey="weekly_val" stroke="#4FC1D9" strokeWidth={2} dot={false} name="7-Day Rolling Avg" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
