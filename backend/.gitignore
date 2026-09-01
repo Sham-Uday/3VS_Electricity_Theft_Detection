@@ -1,2 +1,4 @@
+__pycache__/
 *.csv
-~$AI-driven Temporal Anomaly Detection in Smart Grids.pptx
+~$*.pptx
+.DS_Store
