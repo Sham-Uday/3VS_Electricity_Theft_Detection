@@ -99,3 +99,11 @@ results_df = results_df.sort_values(by='theft_probability', ascending=False)
 # Save output CSV for FastAPI to consume
 results_df.to_csv("ranked_predictions.csv", index=False)
 print("Saved top suspicious predictions to 'ranked_predictions.csv' successfully!")
+
+
+print("\n9. Feature Importance Breakdown...")
+importance = pd.DataFrame({
+    'Feature': X_train.columns,
+    'Importance': model.feature_importances_
+}).sort_values(by='Importance', ascending=False)
+print(importance.to_string(index=False))
