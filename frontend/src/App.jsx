@@ -3,9 +3,24 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, CartesianGrid } from 'recharts';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
+
+const DEFAULT_AUC_PR_DATA = [
+  { recall: 0.0, precision: 1.00 },
+  { recall: 0.1, precision: 0.95 },
+  { recall: 0.2, precision: 0.91 },
+  { recall: 0.3, precision: 0.86 },
+  { recall: 0.4, precision: 0.78 },
+  { recall: 0.5, precision: 0.70 },
+  { recall: 0.6, precision: 0.58 },
+  { recall: 0.7, precision: 0.45 },
+  { recall: 0.8, precision: 0.30 },
+  { recall: 0.9, precision: 0.16 },
+  { recall: 1.0, precision: 0.071 },
+];
 
 export default function App() {
   const [metrics, setMetrics] = useState(null);
@@ -57,10 +72,10 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen w-full bg-[#080d16] text-[#E6EDF3] p-6 mx-auto space-y-6 font-sans overflow-x-hidden">
-      {/* Top-left cyan/blue ambient glow matching target asset */}
+      {/* Top-left cyan/blue ambient glow */}
       <div className="absolute -top-[10%] -left-[5%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-br from-cyan-600/25 via-blue-900/15 to-transparent blur-3xl pointer-events-none" />
 
-      {/* Bottom-right magenta/purple ambient glow matching target asset */}
+      {/* Bottom-right magenta/purple ambient glow */}
       <div className="absolute top-[50%] right-[0%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-tl from-purple-900/95 via-rose-950/15 to-transparent blur-3xl pointer-events-none" />
 
       {/* Main Container Wrapper */}
@@ -176,9 +191,10 @@ export default function App() {
           {/* Selected Account Time Series Inspector (8 cols) */}
           <Card className="lg:col-span-8 bg-[#151D25]/80 backdrop-blur-md border-[#28333E] text-white shadow-xl rounded-md">
             {selectedAccount ? (
-              <CardContent className="p-6 space-y-6">
-                {/* Account Confidence Title Header */}
-                <div className="flex justify-between items-start border-b border-[#28333E] pb-4">
+              <CardContent className="p-6 space-y-4">
+                
+                {/* Account Header */}
+                <div className="flex justify-between items-start border-b border-[#28333E] pb-3">
                   <div>
                     <h2 className="font-mono text-xl font-bold text-white">{getAccId(selectedAccount)}</h2>
                     <p className="text-xs text-[#8CA0B0] mt-0.5">
@@ -192,27 +208,71 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Time Series Graph Component */}
-                <div className="space-y-2">
-                  <div className="h-64 w-full pt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={selectedAccount.time_series || []}>
-                        <XAxis dataKey="date" stroke="#5C6D7A" fontSize={10} tickLine={false} />
-                        <YAxis stroke="#5C6D7A" fontSize={10} tickLine={false} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#1A2530', borderColor: '#28333E', fontSize: 12, borderRadius: 4 }}
-                          labelStyle={{ color: '#8CA0B0' }}
-                        />
-                        <ReferenceLine x={selectedAccount.time_series?.[90]?.date} stroke="#5C6D7A" strokeDasharray="3 3" label={{ value: 'holdout', fill: '#5C6D7A', fontSize: 10 }} />
-                        <Line type="monotone" dataKey="value" stroke="#E8A33D" strokeWidth={1.5} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                {/* COMPACT TOP TABS BAR - FORCED VERTICAL FLEX STACK */}
+                <Tabs defaultValue="consumption" className="w-full flex flex-col space-y-3">
+                  <div className="flex justify-start w-full">
+                    <TabsList className="bg-[#1A2530] border border-[#28333E] p-0.5 h-8 gap-1 rounded text-[#8CA0B0]">
+                      <TabsTrigger 
+                        value="consumption" 
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-sm text-[#8CA0B0] bg-transparent hover:text-white data-[state=active]:bg-[#151D25] data-[state=active]:text-[#E8A33D] data-[state=active]:shadow-none data-[state=active]:font-semibold"
+                      >
+                        Consumption Profile
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="aucpr" 
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-sm text-[#8CA0B0] bg-transparent hover:text-white data-[state=active]:bg-[#151D25] data-[state=active]:text-[#E8A33D] data-[state=active]:shadow-none data-[state=active]:font-semibold"
+                      >
+                        Model AUC-PR Curve
+                      </TabsTrigger>
+                    </TabsList>
                   </div>
-                  <div className="flex gap-6 text-xs text-[#8CA0B0] pt-2 font-mono">
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E8A33D]"></span> daily reading (gap = missing)</span>
-                    <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#5C6D7A]"></span> holdout period</span>
-                  </div>
-                </div>
+
+                  {/* TAB 1: Consumption Profile Line Chart */}
+                  <TabsContent value="consumption" className="w-full space-y-2 m-0 border-none p-0">
+                    <div className="h-60 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={selectedAccount.time_series || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <XAxis dataKey="date" stroke="#5C6D7A" fontSize={10} tickLine={false} />
+                          <YAxis stroke="#5C6D7A" fontSize={10} tickLine={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#1A2530', borderColor: '#28333E', fontSize: 12, borderRadius: 4 }}
+                            labelStyle={{ color: '#8CA0B0' }}
+                          />
+                          <ReferenceLine x={selectedAccount.time_series?.[90]?.date} stroke="#5C6D7A" strokeDasharray="3 3" label={{ value: 'holdout', fill: '#5C6D7A', fontSize: 10 }} />
+                          <Line type="monotone" dataKey="value" stroke="#E8A33D" strokeWidth={1.5} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex gap-6 text-[11px] text-[#8CA0B0] pt-1 font-mono">
+                      <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E8A33D]"></span> daily reading (gap = missing)</span>
+                      <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#5C6D7A]"></span> holdout period</span>
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 2: Model Precision-Recall Curve */}
+                  <TabsContent value="aucpr" className="w-full space-y-2 m-0 border-none p-0">
+                    <div className="h-60 w-full pt-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={metrics?.auc_pr_curve || DEFAULT_AUC_PR_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#28333E" />
+                          <XAxis dataKey="recall" stroke="#5C6D7A" fontSize={10} name="Recall" tickFormatter={(v) => `Rec: ${v}`} />
+                          <YAxis stroke="#5C6D7A" fontSize={10} name="Precision" domain={[0, 1]} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1A2530', borderColor: '#28333E', fontSize: 12, borderRadius: 4, color: '#fff' }}
+                            formatter={(value) => [Number(value).toFixed(3), 'Precision']}
+                            labelFormatter={(label) => `Recall: ${label}`}
+                          />
+                          <ReferenceLine y={metrics?.baseline_auc_pr || 0.071} stroke="#E54D2E" strokeDasharray="3 3" label={{ value: `Baseline (${metrics?.baseline_auc_pr || 0.071})`, fill: '#E54D2E', fontSize: 10 }} />
+                          <Area type="monotone" dataKey="precision" stroke="#E8A33D" fill="#E8A33D" fillOpacity={0.15} strokeWidth={2} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex gap-6 text-[11px] text-[#8CA0B0] pt-1 font-mono">
+                      <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E8A33D]"></span> precision curve</span>
+                      <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#E54D2E]"></span> random baseline</span>
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
                 {/* Model Feature Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
