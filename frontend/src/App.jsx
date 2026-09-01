@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -55,7 +56,7 @@ export default function App() {
   if (error) return <div className="flex h-screen items-center justify-center bg-slate-950 text-red-400 font-mono">Error: {error}</div>;
 
   return (
-    <div className="min-h-screen bg-[#0E141A] text-[#E6EDF3] p-6 max-w-[1500px] mx-auto space-y-6 font-sans">
+    <div className="min-h-screen bg-[#0E141A] text-[#E6EDF3] p-6 w-[99vw] mx-auto space-y-6 font-sans">
       {/* Header with Performance Evaluation (AUC-PR) */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-[#28333E] pb-5 gap-4">
         <div>
@@ -87,13 +88,14 @@ export default function App() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-56 bg-[#151D25] border-[#28333E] text-white focus-visible:ring-cyan-500 placeholder:text-[#5C6D7A]"
           />
+          Sort by:
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value)}
             className="bg-[#151D25] border border-[#28333E] rounded-md px-3 py-2 text-white outline-none cursor-pointer"
           >
-            <option value="score_desc">Sort: score, high to low</option>
-            <option value="score_asc">Sort: score, low to high</option>
+            <option value="score_desc">Score (high to low)</option>
+            <option value="score_asc">Score (low to high)</option>
           </select>
           <label className="flex items-center gap-2 text-[#8CA0B0] cursor-pointer">
             <input
@@ -102,7 +104,7 @@ export default function App() {
               onChange={(e) => setShowEvaluation(e.target.checked)}
               className="accent-[#4FC1D9] rounded"
             />
-            Show confirmed labels (evaluation view)
+            Show confirmed labels
           </label>
         </div>
         <div className="text-[#8CA0B0]">
@@ -114,50 +116,52 @@ export default function App() {
       <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Ranked Accounts Sidebar List (4 cols) */}
-        <Card className="lg:col-span-4 bg-[#151D25] border-[#28333E] text-white shadow-none rounded-md overflow-hidden">
-          <CardHeader className="border-b border-[#28333E] py-3 px-4 bg-[#1A2530]">
+        <Card className="lg:col-span-4 bg-[#151D25] shadow-none overflow-hidden flex flex-col">
+          <CardHeader className=" py-3 px-4 bg-[#1A2530] shrink-0">
             <CardTitle className="text-xs font-semibold text-[#8CA0B0] uppercase tracking-wider">
               Ranked accounts
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 max-h-[650px] overflow-y-auto divide-y divide-[#1E2830]">
-            {filteredAccounts.map((acc, index) => {
-              const accId = getAccId(acc);
-              const score = getScore(acc);
-              const isSelected = selectedAccount && getAccId(selectedAccount) === accId;
+          <ScrollArea className="h-[465px]">
+            <div className="divide-y divide-[#1E2830]">
+              {filteredAccounts.map((acc, index) => {
+                const accId = getAccId(acc);
+                const score = getScore(acc);
+                const isSelected = selectedAccount && getAccId(selectedAccount) === accId;
 
-              return (
-                <div
-                  key={accId}
-                  onClick={() => setSelectedAccount(acc)}
-                  className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-[#1A2530] border-l-4 border-[#E8A33D]' : 'hover:bg-[#1A2530]/50'
-                  }`}
-                >
-                  <span className="col-span-1 font-mono text-xs text-[#5C6D7A]">#{index + 1}</span>
-                  <span className="col-span-5 font-mono text-xs truncate font-medium" title={accId}>{accId}</span>
-                  
-                  {/* Micro Sparkline Preview */}
-                  <div className="col-span-3 h-5 flex items-center">
-                    {acc.sparkline && (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={acc.sparkline.map((v, i) => ({ i, v }))}>
-                          <Line type="monotone" dataKey="v" stroke="#4FC1D9" strokeWidth={1.5} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
+                return (
+                  <div
+                    key={accId}
+                    onClick={() => setSelectedAccount(acc)}
+                    className={`grid grid-cols-12 gap-2 items-center px-4 py-3 cursor-pointer transition-colors ${
+                      isSelected ? 'bg-[#1A2530] border-l-4 border-[#E8A33D]' : 'hover:bg-[#1A2530]/50'
+                    }`}
+                  >
+                    <span className="col-span-1 font-mono text-xs text-[#5C6D7A]">#{index + 1}</span>
+                    <span className="col-span-5 font-mono text-xs truncate font-medium" title={accId}>{accId}</span>
+                    
+                    {/* Micro Sparkline Preview */}
+                    <div className="col-span-3 h-5 flex items-center">
+                      {acc.sparkline && (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={acc.sparkline.map((v, i) => ({ i, v }))}>
+                            <Line type="monotone" dataKey="v" stroke="#4FC1D9" strokeWidth={1.5} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </div>
 
-                  {/* Confidence Score Output */}
-                  <div className="col-span-3 text-right font-mono text-xs">
-                    <span className={`font-semibold ${score >= 0.5 ? 'text-[#E8A33D]' : 'text-[#8CA0B0]'}`}>
-                      {score.toFixed(2)}
-                    </span>
+                    {/* Confidence Score Output */}
+                    <div className="col-span-3 text-right font-mono text-xs">
+                      <span className={`font-semibold ${score >= 0.5 ? 'text-[#E8A33D]' : 'text-[#8CA0B0]'}`}>
+                        {score.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
+                );
+              })}
+            </div>
+          </ScrollArea>
         </Card>
 
         {/* Selected Account Time Series Inspector (8 cols) */}
