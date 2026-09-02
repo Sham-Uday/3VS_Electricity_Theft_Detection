@@ -19,7 +19,7 @@ np.random.seed(42)
 DAYS = 1095  # 3 years
 N_ACCOUNTS = 500
 SPLIT_IDX = int(DAYS * 0.7)
-START_DATE = pd.to_datetime("2023-09-01")
+START_DATE = pd.to_datetime("2014-01-01")
 DATE_RANGE = pd.date_range(start=START_DATE, periods=DAYS, freq="D")
 
 accounts_db = []
