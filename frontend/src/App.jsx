@@ -91,9 +91,9 @@ export default function App() {
   if (error) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-red-400 font-mono">Error: {error}</div>;
 
   return (
-    <div className="relative min-h-screen w-full bg-[#080d16]/75 text-[#E6EDF3] p-6 mx-auto space-y-6 font-sans overflow-x-hidden">
+    <div className="relative min-h-screen w-full bg-[#080d16] text-[#E6EDF3] p-6 mx-auto space-y-6 font-sans overflow-x-hidden">
       {/* Top-left cyan/blue ambient glow */}
-      <div className="absolute -top-[0%] -left-[5%] w-[75vw] h-[50vh] rounded-full bg-gradient-to-br from-cyan-600/25 via-blue-900/15 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute -top-[0%] -left-[5%] w-[75vw] h-[50vh] rounded-full bg-gradient-to-br from-cyan-600/50 via-blue-900/50 to-transparent blur-3xl pointer-events-none" />
 
       {/* Bottom-right magenta/purple ambient glow */}
       <div className="absolute top-[50%] right-[0%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-tl from-purple-900/95 via-rose-950/15 to-transparent blur-3xl pointer-events-none" />
