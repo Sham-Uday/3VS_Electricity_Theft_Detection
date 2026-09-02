@@ -91,9 +91,9 @@ export default function App() {
   if (error) return <div className="flex h-screen items-center justify-center bg-[#080d16] text-red-400 font-mono">Error: {error}</div>;
 
   return (
-    <div className="relative min-h-screen w-full bg-[#080d16] text-[#E6EDF3] p-6 mx-auto space-y-6 font-sans overflow-x-hidden">
+    <div className="relative min-h-screen w-full bg-[#080d16]/75 text-[#E6EDF3] p-6 mx-auto space-y-6 font-sans overflow-x-hidden">
       {/* Top-left cyan/blue ambient glow */}
-      <div className="absolute -top-[10%] -left-[5%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-br from-cyan-600/25 via-blue-900/15 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute -top-[0%] -left-[5%] w-[75vw] h-[50vh] rounded-full bg-gradient-to-br from-cyan-600/25 via-blue-900/15 to-transparent blur-3xl pointer-events-none" />
 
       {/* Bottom-right magenta/purple ambient glow */}
       <div className="absolute top-[50%] right-[0%] w-[50vw] h-[50vh] rounded-full bg-gradient-to-tl from-purple-900/95 via-rose-950/15 to-transparent blur-3xl pointer-events-none" />
@@ -166,7 +166,7 @@ export default function App() {
                 Ranked accounts
               </CardTitle>
             </CardHeader>
-            <ScrollArea className="flex-1 w-full overflow-auto">
+            <ScrollArea className="flex-1 w-full overflow-auto backdrop-blur-3xl">
               <ScrollBar></ScrollBar>
               <div className="divide-y divide-[#1E2830]">
                 {filteredAccounts.map((acc, index) => {
@@ -210,7 +210,7 @@ export default function App() {
           </Card>
 
           {/* Selected Account Time Series Inspector (8 cols) */}
-          <Card className="lg:col-span-8 bg-[#151D25]/80 backdrop-blur-md border-[#28333E] text-white shadow-xl rounded-md">
+          <Card className="lg:col-span-8 bg-white/1 backdrop-blur-3xl border-[#28333E] text-white shadow-xl rounded-xl">
             {selectedAccount ? (
               <CardContent className="p-6 space-y-4">
                 
